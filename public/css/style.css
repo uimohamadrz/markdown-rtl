@@ -92,6 +92,14 @@ header a:hover {
     margin-left: 16px;
 }
 
+#dir-button {
+    margin-left: 16px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 #sync-button {
     margin-left: 16px;
     -webkit-user-select: none;
@@ -321,6 +329,80 @@ footer {
 
 .split-divider.active {
   background: #666;
+}
+
+/* ------------------------------------------------------------------
+   RTL / bidi support
+   The preview direction is set from JS (see src/direction.js):
+   dir="rtl" on #output, or dir="auto" on each block. The rules below
+   use :dir() so they work for both.
+   ------------------------------------------------------------------ */
+
+/* Vazirmatn is used only for Arabic-script characters, Latin text keeps
+   the usual GitHub font stack. */
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("../fonts/Vazirmatn.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200F;
+}
+
+.markdown-body {
+  font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* github-markdown-css uses physical left/right values; mirror them in RTL */
+.markdown-body ul:dir(rtl),
+.markdown-body ol:dir(rtl) {
+  padding-left: 0;
+  padding-right: 2em;
+}
+
+.markdown-body dd:dir(rtl) {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* tables are shrink-to-fit blocks: in "auto" mode the page is LTR, so push
+   an RTL table to the right edge ourselves */
+.markdown-body table:dir(rtl) {
+  margin-left: auto;
+}
+
+.markdown-body blockquote:dir(rtl) {
+  border-left: 0;
+  border-right: .25em solid #d1d9e0;
+}
+
+[data-theme="dark"] .markdown-body blockquote:dir(rtl) {
+  border-right-color: #3d444d;
+}
+
+/* Code is always left-to-right, even inside an RTL document */
+.markdown-body pre,
+.markdown-body pre code {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: isolate;
+}
+
+.markdown-body :not(pre) > code,
+.markdown-body tt,
+.markdown-body kbd {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Editor (Monaco): Auto = every line picks its own base direction,
+   RTL = the text of the editor is right-to-left. */
+#editor[data-dir-mode="auto"] .monaco-editor .view-line {
+  unicode-bidi: plaintext;
+}
+
+#editor[data-dir-mode="rtl"] .monaco-editor .view-lines {
+  direction: rtl;
 }
 
 /* Dark theme overrides */

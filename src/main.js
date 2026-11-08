@@ -3,15 +3,24 @@ import * as monaco from 'monaco-editor';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import mermaid from 'mermaid';
+import {
+    applyEditorDirection,
+    applyPreviewDirection,
+    directionLabel,
+    nextDirectionMode,
+    normalizeDirectionMode
+} from './direction.js';
 
 const init = () => {
     let hasEdited = false;
     let scrollBarSync = false;
+    let directionMode = 'auto';
 
     const localStorageNamespace = 'com.markdownlivepreview';
     const localStorageKey = 'last_state';
     const localStorageScrollBarKey = 'scroll_bar_settings';
     const localStorageThemeKey = 'theme_settings';
+    const localStorageDirectionKey = 'direction_settings';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
     let mermaidRenderTimer = null;
     let mermaidRenderVersion = 0;
@@ -55,7 +64,7 @@ _You **can** combine them_
 
 ## Images
 
-![This is an alt text.](/image/Markdown-mark.svg "This is a sample image.")
+![This is an alt text.](image/Markdown-mark.svg "This is a sample image.")
 
 ## Links
 
@@ -259,7 +268,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         };
         let html = marked.parse(markdown, options);
         let sanitized = DOMPurify.sanitize(html);
-        document.querySelector('#output').innerHTML = sanitized;
+        let outputElement = document.querySelector('#output');
+        outputElement.innerHTML = sanitized;
+        applyPreviewDirection(outputElement, directionMode);
         scheduleMermaidRender();
     };
 
@@ -356,6 +367,27 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 monaco.editor.setTheme(checked ? 'vs-dark' : 'vs');
             }
             renderMermaidDiagrams();
+        });
+    };
+
+    // ----- text direction (auto / rtl / ltr) -----
+
+    let setDirectionMode = (mode) => {
+        directionMode = normalizeDirectionMode(mode);
+        applyPreviewDirection(document.querySelector('#output'), directionMode);
+        applyEditorDirection(document.querySelector('#editor'), directionMode);
+        let label = document.querySelector('#dir-button a');
+        if (label) {
+            label.textContent = directionLabel(directionMode);
+        }
+    };
+
+    let setupDirectionButton = () => {
+        setDirectionMode(directionMode);
+        document.querySelector('#dir-button').addEventListener('click', (event) => {
+            event.preventDefault();
+            setDirectionMode(nextDirectionMode(directionMode));
+            saveDirectionSettings(directionMode);
         });
     };
 
@@ -534,6 +566,15 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         return last;
     };
 
+    let loadDirectionSettings = () => {
+        return normalizeDirectionMode(Storehouse.getItem(localStorageNamespace, localStorageDirectionKey));
+    };
+
+    let saveDirectionSettings = (settings) => {
+        let expiredAt = new Date(2099, 1, 1);
+        Storehouse.setItem(localStorageNamespace, localStorageDirectionKey, settings, expiredAt);
+    };
+
     let saveScrollBarSettings = (settings) => {
         let expiredAt = new Date(2099, 1, 1);
         Storehouse.setItem(localStorageNamespace, localStorageScrollBarKey, settings, expiredAt);
@@ -627,7 +668,10 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
     // ----- entry point -----
     let lastContent = loadLastContent();
+    // must be known before the first render
+    directionMode = loadDirectionSettings();
     let editor = setupEditor();
+    setupDirectionButton();
     if (typeof lastContent === 'string') {
         presetValue(lastContent);
     } else {
